@@ -123,10 +123,7 @@ export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState>
 	async swap(
 		pool: BrownFiPoolState,
 		amountIn: bigint,
-		zeroToOne?: boolean,
-		to?: Address,
-		amountOutMin?: bigint,
-		deadline?: bigint
+		zeroToOne: boolean
 	): Promise<any> {
 		// check is weth pool
 		const isWETH = pool.token0 == WETH || pool.token1 == WETH;
@@ -162,9 +159,11 @@ export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState>
 			? [pool.token0, pool.token1]
 			: [pool.token1, pool.token0];
 
-		const _amountOutMin = amountOutMin ?? 0n;
-		const _to = to ?? zeroAddress;
-		const _deadline = deadline ?? BigInt(Math.floor(Date.now() / 1000) + 900); // 15 minutes from now
+		const amountOutMin = 0n;
+		const to = zeroAddress;
+
+		const latestBlock = await this.client.getBlock();
+		const deadline = latestBlock.timestamp + 900n; // 15 minutes from latest block
 
 		const { request } = await this.client.simulateContract({
 			address: ROUTER_ADDRESS,
@@ -173,16 +172,8 @@ export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState>
 				? "swapETHForExactTokensWithPrice"
 				: "swapExactTokensForTokensWithPrice",
 			args: isWETH
-				? [_amountOutMin, swapPath, _to, _deadline, priceFeedUpdateData]
-				: [
-						amountIn,
-						_amountOutMin,
-						swapPath,
-						_to,
-						_deadline,
-						priceFeedUpdateData,
-				  ],
-			account: _to,
+				? [amountOutMin, swapPath, to, deadline, priceFeedUpdateData]
+				: [amountIn, amountOutMin, swapPath, to, deadline, priceFeedUpdateData],
 			value: isWETH ? amountIn + updateFee : updateFee,
 		});
 

@@ -1,6 +1,5 @@
 import type {
 	Abi,
-	Address,
 	PublicClient,
 	WatchContractEventOnLogsParameter,
 } from "viem";
@@ -70,9 +69,6 @@ export abstract class BasePoolStateProvider<TPool extends BasePoolState> {
 	abstract swap(
 		pool: TPool,
 		amountIn: bigint,
-		zeroToOne: boolean,
-		to?: Address,
-		amountOutMin?: bigint,
-		deadline?: bigint
+		zeroToOne: boolean
 	): Promise<void>;
 }
