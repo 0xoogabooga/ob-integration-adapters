@@ -6,4 +6,6 @@ export interface BrownFiPoolState extends BasePoolState {
 	oraclePrice: bigint;
 	decimalShift: bigint;
 	qti: bigint;
+	updateFee: bigint;
+	updateFeeData: `0x${string}`[];
 }
