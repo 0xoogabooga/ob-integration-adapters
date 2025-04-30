@@ -58,7 +58,7 @@ export abstract class BasePoolStateProvider<TPool extends BasePoolState> {
 	 * - if a new pool is found, then add it to this.pools
 	 */
 	abstract handleEvent(
-		log: WatchContractEventOnLogsParameter<typeof this.abi>[number]
+		log: WatchContractEventOnLogsParameter<typeof this.abi>[number],
 	): Promise<void>;
 
 	/**
@@ -69,6 +69,6 @@ export abstract class BasePoolStateProvider<TPool extends BasePoolState> {
 	abstract swap(
 		pool: TPool,
 		amountIn: bigint,
-		zeroToOne: boolean
+		zeroToOne: boolean,
 	): Promise<void>;
 }

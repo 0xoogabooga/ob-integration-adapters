@@ -12,7 +12,7 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 	override swapExactInput(
 		pool: BrownFiPoolState,
 		zeroToOne: boolean,
-		amountIn: bigint
+		amountIn: bigint,
 	): bigint {
 		// Extract reserves and parameters from pool state
 		const [reserveIn, reserveOut] = zeroToOne
@@ -30,7 +30,7 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 
 		let amountOut: bigint;
 
-		if (kappa == this.Q128 * 2n) {
+		if (kappa === this.Q128 * 2n) {
 			if (zeroToOne) {
 				// dy = P * y * dx / (P * dx + y)
 				amountOut =
@@ -46,9 +46,9 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 			const sqrtDelta = BigInt(
 				Math.round(
 					Math.sqrt(
-						Number(this.delta(amountIn, reserveOut, kappa, oPrice, zeroToOne))
-					)
-				)
+						Number(this.delta(amountIn, reserveOut, kappa, oPrice, zeroToOne)),
+					),
+				),
 			);
 			if (zeroToOne) {
 				// P * dx + y - sqrt(delta)
@@ -69,7 +69,7 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 				const denominator = this.mulDivRoundingUp(
 					oPrice,
 					this.Q128 * 2n - kappa,
-					this.Q128
+					this.Q128,
 				);
 				amountOut = this.mulDivRoundingUp(numerator, this.Q128, denominator);
 			}
@@ -79,7 +79,7 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 		return this.mulDivRoundingUp(
 			amountOut,
 			this.FEE_DENOMINATOR - pool.fee,
-			this.FEE_DENOMINATOR
+			this.FEE_DENOMINATOR,
 		);
 	}
 
@@ -89,7 +89,7 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 	override swapExactOutput(
 		pool: BrownFiPoolState,
 		zeroToOne: boolean,
-		amountOut: bigint
+		amountOut: bigint,
 	): bigint {
 		// Extract reserves and parameters from pool state
 		const [reserveIn, reserveOut] = zeroToOne
@@ -110,7 +110,7 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 		const amountOutWithFee = this.mulDivRoundingUp(
 			amountOut,
 			this.FEE_DENOMINATOR,
-			this.FEE_DENOMINATOR - pool.fee
+			this.FEE_DENOMINATOR - pool.fee,
 		);
 
 		// Check liquidity constraint: 10 * dx < 9 * x
@@ -122,7 +122,7 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 		const r = this.mulDivRoundingUp(
 			kappa,
 			amountOutWithFee,
-			reserveOut - amountOutWithFee
+			reserveOut - amountOutWithFee,
 		);
 
 		let avgPrice: bigint;
@@ -134,7 +134,7 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 			avgPrice = this.mulDivRoundingUp(
 				this.Q128 * 2n + r,
 				this.Q128,
-				oPrice * 2n
+				oPrice * 2n,
 			);
 			amountIn = this.mulDivRoundingUp(amountOutWithFee, avgPrice, this.Q128);
 		} else {
@@ -142,7 +142,7 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 			avgPrice = this.mulDivRoundingUp(
 				oPrice,
 				this.Q128 * 2n + r,
-				this.Q128 * 2n
+				this.Q128 * 2n,
 			);
 			amountIn = this.mulDivRoundingUp(amountOutWithFee, avgPrice, this.Q128);
 		}
@@ -152,10 +152,10 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 
 	override spotPriceWithoutFee(
 		pool: BrownFiPoolState,
-		zeroToOne: boolean
+		zeroToOne: boolean,
 	): number {
-		let price;
-		if (pool.qti == 0n) {
+		let price: number;
+		if (pool.qti === 0n) {
 			if (pool.decimalShift > 0n) {
 				price =
 					Number(10n ** pool.decimalShift * this.Q128) /
@@ -181,8 +181,8 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 			}
 		}
 
-		if (zeroToOne) return pool.qti == 0n ? 1 / price : price;
-		else return pool.qti == 0n ? price : 1 / price;
+		if (zeroToOne) return pool.qti === 0n ? 1 / price : price;
+		return pool.qti === 0n ? price : 1 / price;
 	}
 
 	// Helper function to mimic FullMath.mulDivRoundingUp with bigint
@@ -201,10 +201,9 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 		reserveOut: bigint,
 		kappa: bigint,
 		oPrice: bigint,
-		isSell: boolean
+		isSell: boolean,
 	): bigint {
 		let temp1: bigint;
-		let temp2: bigint;
 		if (isSell) {
 			// temp1 = (P * dx - y)^2
 			if (this.mulDivRoundingUp(oPrice, amountIn, this.Q128) < reserveOut) {
@@ -225,7 +224,7 @@ export class BrownFiPoolMath extends BasePoolMath<BrownFiPoolState> {
 			}
 		}
 		// temp2 = 2 * P * K * y * dx
-		temp2 =
+		const temp2: bigint =
 			this.mulDivRoundingUp(oPrice, amountIn, this.Q128) *
 			this.mulDivRoundingUp(kappa, reserveOut, this.Q128) *
 			2n;

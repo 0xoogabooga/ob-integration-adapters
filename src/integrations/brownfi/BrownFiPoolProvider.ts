@@ -1,13 +1,15 @@
+import { EvmPriceServiceConnection } from "@pythnetwork/pyth-evm-js";
 import {
 	type Address,
-	decodeEventLog,
 	type WatchContractEventOnLogsParameter,
 	zeroAddress,
-	erc20Abi,
-	type PrepareTransactionRequestRequest,
 } from "viem";
 import { BasePoolStateProvider } from "../../base/BasePoolProvider";
 import type { BrownFiPoolState } from "./BrownFiPoolState";
+import { FactoryAbi } from "./abis/Factory";
+import { PairAbi } from "./abis/Pair";
+import { PythAbi } from "./abis/Pyth";
+import { RouterAbi } from "./abis/Router";
 import {
 	FACTORY_ADDRESS,
 	PRICE_FEED_IDS,
@@ -15,11 +17,6 @@ import {
 	ROUTER_ADDRESS,
 	WETH,
 } from "./constants";
-import { FactoryAbi } from "./abis/Factory";
-import { PairAbi } from "./abis/Pair";
-import { EvmPriceServiceConnection } from "@pythnetwork/pyth-evm-js";
-import { PythAbi } from "./abis/Pyth";
-import { RouterAbi } from "./abis/Router";
 
 export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState> {
 	readonly abi = [...FactoryAbi, ...PairAbi];
@@ -34,7 +31,7 @@ export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState>
 			args: [],
 		})) as bigint;
 
-		let pairs: BrownFiPoolState[] = [];
+		const pairs: BrownFiPoolState[] = [];
 
 		for (let i = 0n; i < allPairLength; i += 1n) {
 			const poolAddress = (await this.client.readContract({
@@ -121,8 +118,10 @@ export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState>
 			token0: (token0.result as Address) ?? zeroAddress,
 			token1: (token1.result as Address) ?? zeroAddress,
 			address: pool,
-			reserve0: (reserves.result as any)?.[0] ?? 0n,
-			reserve1: (reserves.result as any)?.[1] ?? 0n,
+			reserve0:
+				(reserves as { result: bigint[] | undefined }).result?.[0] ?? 0n,
+			reserve1:
+				(reserves as { result: bigint[] | undefined }).result?.[1] ?? 0n,
 			kappa: (kappa.result as bigint) ?? 0n,
 			fee: (fee.result as bigint) ?? 0n,
 			oraclePrice: (oraclePrice.result as bigint) ?? 0n,
@@ -136,10 +135,10 @@ export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState>
 	async swap(
 		pool: BrownFiPoolState,
 		amountIn: bigint,
-		zeroToOne: boolean
-	): Promise<any> {
+		zeroToOne: boolean,
+	): Promise<void> {
 		// check is weth pool
-		const isWETH = pool.token0 == WETH || pool.token1 == WETH;
+		const isWETH = pool.token0 === WETH || pool.token1 === WETH;
 
 		const swapPath = zeroToOne
 			? [pool.token0, pool.token1]
@@ -151,7 +150,7 @@ export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState>
 		const latestBlock = await this.client.getBlock();
 		const deadline = latestBlock.timestamp + 900n; // 15 minutes from latest block
 
-		const { request } = await this.client.simulateContract({
+		await this.client.simulateContract({
 			address: ROUTER_ADDRESS,
 			abi: RouterAbi,
 			functionName: isWETH
@@ -162,12 +161,10 @@ export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState>
 				: [amountIn, amountOutMin, swapPath, to, deadline, pool.updateFeeData],
 			value: isWETH ? amountIn + pool.updateFee : pool.updateFee,
 		});
-
-		return request;
 	}
 
 	async handleEvent(
-		log: WatchContractEventOnLogsParameter<typeof this.abi>[number]
+		log: WatchContractEventOnLogsParameter<typeof this.abi>[number],
 	): Promise<void> {
 		if (!log.address) {
 			return;
@@ -189,7 +186,7 @@ export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState>
 					reserve0: bigint;
 					reserve1: bigint;
 				};
-				let poolState = this.pools.get(log.address);
+				const poolState = this.pools.get(log.address);
 				if (!poolState) return;
 				poolState.reserve0 = args.reserve0;
 				poolState.reserve1 = args.reserve1;
@@ -200,10 +197,10 @@ export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState>
 	}
 
 	async updatePoolUpdateFee(poolAddress: Address) {
-		let pool = this.pools.get(poolAddress);
+		const pool = this.pools.get(poolAddress);
 		if (!pool) return;
 
-		let priceFeedIds: string[] = [];
+		const priceFeedIds: string[] = [];
 		if (PRICE_FEED_IDS[pool.token0]) {
 			priceFeedIds.push(PRICE_FEED_IDS[pool.token0] as string);
 		}
@@ -215,11 +212,11 @@ export class BrownFiPoolProvider extends BasePoolStateProvider<BrownFiPoolState>
 
 		// Create connection to Pyth price service
 		const pythConn = new EvmPriceServiceConnection(
-			"https://hermes.pyth.network"
+			"https://hermes.pyth.network",
 		);
 		// Get price feed update data
 		const priceFeedUpdateData = (await pythConn.getPriceFeedsUpdateData(
-			priceFeedIds
+			priceFeedIds,
 		)) as `0x${string}`[];
 
 		const updateFee = await this.client.readContract({
